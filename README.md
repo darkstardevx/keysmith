@@ -8,14 +8,15 @@
 
 ```bash
 keysmith password --length 24 --exclude-ambiguous --copy
+keysmith password --length 24 --save github          # pipe straight into CyberVault
 keysmith passphrase --words 6 --capitalize
 keysmith hash --file some-download.iso
 keysmith pwhash                    # hash a password for storage (hidden prompt)
 keysmith pwhash --verify '$argon2id$v=19$...'   # check a password against a stored hash
 ```
 
-- **`password`** — random character-based, configurable charset (`--no-lower/--no-upper/--no-digits/--no-symbols`), `--exclude-ambiguous` drops visually-confusable characters (`0O1lI|`), `--count N` for a batch, `--copy` to the clipboard via `wl-copy`
-- **`passphrase`** — diceware-style, real words from the **actual EFF large wordlist** (7776 words, embedded at compile time — not a small hardcoded sample)
+- **`password`** — random character-based, configurable charset (`--no-lower/--no-upper/--no-digits/--no-symbols`), `--exclude-ambiguous` drops visually-confusable characters (`0O1lI|`), `--count N` for a batch, `--copy` to the clipboard via `wl-copy`, `--save <label>` to pipe the first generated password straight into [CyberVault](https://github.com/darkstardevx/cybervault) (`cybervault add <label>`)
+- **`passphrase`** — diceware-style, real words from the **actual EFF large wordlist** (7776 words, embedded at compile time — not a small hardcoded sample); also supports `--save <label>`
 - **`hash`** — SHA-256/SHA-512/BLAKE3 side by side, of text or a file. Checksums, for integrity — **not** for storing passwords
 - **`pwhash`** — Argon2id, the correct primitive for storing a password (deliberately slow + memory-hard + salted). Password is a hidden terminal prompt (`rpassword`, refuses piped/non-TTY input by design), never a CLI argument or plaintext on screen
 
@@ -46,6 +47,18 @@ round-tripped for real, including confirming the same password produces a
 different stored hash each time (different random salt) while still
 verifying correctly either way.
 
+## 🔐 CyberVault integration
+
+`--save <label>` doesn't link [CyberVault](https://github.com/darkstardevx/cybervault)
+as a library — it shells out to the standalone `cybervault add <label>`
+binary and pipes the first generated secret to it over stdin, the same
+"reuse via subprocess" pattern used everywhere else in this toolset.
+CyberVault's own master-password prompt still goes straight to the
+terminal, so unlocking the vault works exactly as it would running
+`cybervault` directly — Keysmith only supplies the secret being stored,
+never the master password. Requires `cybervault` to be installed and
+on `PATH`.
+
 ## 🧩 Layout
 
 ```
@@ -56,6 +69,7 @@ src/hash.rs        SHA-256/SHA-512/BLAKE3 checksums
 src/pwhash.rs      Argon2id hash + verify
 src/strength.rs    entropy -> label + colored meter bar
 src/clipboard.rs   wl-copy integration
+src/vault_save.rs  pipes a generated secret into `cybervault add`
 ```
 
 ## 🗺 Known limitations

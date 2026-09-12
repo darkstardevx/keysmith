@@ -4,6 +4,7 @@ mod passphrase;
 mod password;
 mod pwhash;
 mod strength;
+mod vault_save;
 mod wordlist;
 
 use clap::{Parser, Subcommand};
@@ -48,6 +49,11 @@ enum Commands {
         /// Copy the (first) generated password to the clipboard via wl-copy.
         #[arg(long)]
         copy: bool,
+        /// Save the (first) generated password into CyberVault under this
+        /// label (shells out to `cybervault add <label>` — CyberVault must
+        /// be installed and its master-password prompt will appear).
+        #[arg(long)]
+        save: Option<String>,
     },
     /// Diceware-style word passphrase (EFF large wordlist, 7776 words).
     Passphrase {
@@ -61,6 +67,10 @@ enum Commands {
         count: usize,
         #[arg(long)]
         copy: bool,
+        /// Save the (first) generated passphrase into CyberVault under
+        /// this label.
+        #[arg(long)]
+        save: Option<String>,
     },
     /// Checksum text or a file across SHA-256/SHA-512/BLAKE3.
     Hash {
@@ -97,7 +107,28 @@ fn charset_from_flags(no_lower: bool, no_upper: bool, no_digits: bool, no_symbol
     Charset { lower: !no_lower, upper: !no_upper, digits: !no_digits, symbols: !no_symbols, exclude_ambiguous }
 }
 
-fn run_password(length: usize, cs: &Charset, count: usize, copy: bool, color_on: bool) -> ExitCode {
+/// Shared by `password`/`passphrase`: handles `--copy` and `--save` on
+/// the first generated secret, once generation is done. Neither flag
+/// touches generation itself, so this stays common rather than
+/// duplicated per command.
+fn handle_copy_and_save(first: Option<&str>, copy: bool, save: Option<&str>) {
+    let Some(secret) = first else { return };
+    if copy {
+        match clipboard::copy(secret) {
+            Ok(()) => println!("(copied to clipboard)"),
+            Err(e) => eprintln!("keysmith: failed to copy to clipboard: {e}"),
+        }
+    }
+    if let Some(label) = save {
+        match vault_save::save(label, secret) {
+            Ok(true) => println!("(saved to CyberVault as \"{label}\")"),
+            Ok(false) => eprintln!("keysmith: cybervault reported failure saving \"{label}\" (see its output above)"),
+            Err(e) => eprintln!("keysmith: failed to run cybervault — is it installed? ({e})"),
+        }
+    }
+}
+
+fn run_password(length: usize, cs: &Charset, count: usize, copy: bool, save: Option<&str>, color_on: bool) -> ExitCode {
     let mut first: Option<String> = None;
     for _ in 0..count {
         match password::generate(length, cs) {
@@ -114,17 +145,11 @@ fn run_password(length: usize, cs: &Charset, count: usize, copy: bool, color_on:
             }
         }
     }
-    if copy {
-        match first.as_deref().map(clipboard::copy) {
-            Some(Ok(())) => println!("(copied to clipboard)"),
-            Some(Err(e)) => eprintln!("keysmith: failed to copy to clipboard: {e}"),
-            None => {}
-        }
-    }
+    handle_copy_and_save(first.as_deref(), copy, save);
     ExitCode::SUCCESS
 }
 
-fn run_passphrase(words: usize, separator: &str, capitalize: bool, count: usize, copy: bool, color_on: bool) -> ExitCode {
+fn run_passphrase(words: usize, separator: &str, capitalize: bool, count: usize, copy: bool, save: Option<&str>, color_on: bool) -> ExitCode {
     let list = wordlist::words();
     let mut first: Option<String> = None;
     for _ in 0..count {
@@ -142,13 +167,7 @@ fn run_passphrase(words: usize, separator: &str, capitalize: bool, count: usize,
             }
         }
     }
-    if copy {
-        match first.as_deref().map(clipboard::copy) {
-            Some(Ok(())) => println!("(copied to clipboard)"),
-            Some(Err(e)) => eprintln!("keysmith: failed to copy to clipboard: {e}"),
-            None => {}
-        }
-    }
+    handle_copy_and_save(first.as_deref(), copy, save);
     ExitCode::SUCCESS
 }
 
@@ -219,12 +238,12 @@ fn main() -> ExitCode {
     }
 
     match args.command {
-        Commands::Password { length, no_lower, no_upper, no_digits, no_symbols, exclude_ambiguous, count, copy } => {
+        Commands::Password { length, no_lower, no_upper, no_digits, no_symbols, exclude_ambiguous, count, copy, save } => {
             let cs = charset_from_flags(no_lower, no_upper, no_digits, no_symbols, exclude_ambiguous);
-            run_password(length, &cs, count, copy, color_on)
+            run_password(length, &cs, count, copy, save.as_deref(), color_on)
         }
-        Commands::Passphrase { words, separator, capitalize, count, copy } => {
-            run_passphrase(words, &separator, capitalize, count, copy, color_on)
+        Commands::Passphrase { words, separator, capitalize, count, copy, save } => {
+            run_passphrase(words, &separator, capitalize, count, copy, save.as_deref(), color_on)
         }
         Commands::Hash { text, file } => run_hash(text, file),
         Commands::Pwhash { verify } => run_pwhash(verify),
