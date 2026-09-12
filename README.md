@@ -9,14 +9,15 @@
 ```bash
 keysmith password --length 24 --exclude-ambiguous --copy
 keysmith password --length 24 --save github          # pipe straight into CyberVault
+keysmith password --raw --length 24                  # bare secret, no banner/meter — for scripts/other tools
 keysmith passphrase --words 6 --capitalize
 keysmith hash --file some-download.iso
 keysmith pwhash                    # hash a password for storage (hidden prompt)
 keysmith pwhash --verify '$argon2id$v=19$...'   # check a password against a stored hash
 ```
 
-- **`password`** — random character-based, configurable charset (`--no-lower/--no-upper/--no-digits/--no-symbols`), `--exclude-ambiguous` drops visually-confusable characters (`0O1lI|`), `--count N` for a batch, `--copy` to the clipboard via `wl-copy`, `--save <label>` to pipe the first generated password straight into [CyberVault](https://github.com/darkstardevx/cybervault) (`cybervault add <label>`)
-- **`passphrase`** — diceware-style, real words from the **actual EFF large wordlist** (7776 words, embedded at compile time — not a small hardcoded sample); also supports `--save <label>`
+- **`password`** — random character-based, configurable charset (`--no-lower/--no-upper/--no-digits/--no-symbols`), `--exclude-ambiguous` drops visually-confusable characters (`0O1lI|`), `--count N` for a batch, `--copy` to the clipboard via `wl-copy`, `--save <label>` to pipe the first generated password straight into [CyberVault](https://github.com/darkstardevx/cybervault) (`cybervault add <label>`), `--raw` for bare machine-readable output (also used by [CyberVault's own TUI](https://github.com/darkstardevx/cybervault) to generate on demand)
+- **`passphrase`** — diceware-style, real words from the **actual EFF large wordlist** (7776 words, embedded at compile time — not a small hardcoded sample); also supports `--save <label>` and `--raw`
 - **`hash`** — SHA-256/SHA-512/BLAKE3 side by side, of text or a file. Checksums, for integrity — **not** for storing passwords
 - **`pwhash`** — Argon2id, the correct primitive for storing a password (deliberately slow + memory-hard + salted). Password is a hidden terminal prompt (`rpassword`, refuses piped/non-TTY input by design), never a CLI argument or plaintext on screen
 
@@ -58,6 +59,14 @@ terminal, so unlocking the vault works exactly as it would running
 `cybervault` directly — Keysmith only supplies the secret being stored,
 never the master password. Requires `cybervault` to be installed and
 on `PATH`.
+
+The integration runs the other direction too: CyberVault's TUI shells
+out to `keysmith password --raw`/`keysmith passphrase --raw` (Ctrl+G /
+Ctrl+P while entering a new entry's secret) to generate on the spot
+instead of requiring you to type or paste one in. `--raw` exists
+specifically for this — one secret on stdout, no banner, no color, no
+entropy meter, so it's safe for another program to capture directly
+rather than parsing colored/formatted output.
 
 ## 🧩 Layout
 

@@ -54,6 +54,11 @@ enum Commands {
         /// be installed and its master-password prompt will appear).
         #[arg(long)]
         save: Option<String>,
+        /// Machine-readable output: just the secret(s), one per line, no
+        /// banner/entropy meter/color — implies --quiet. For scripting or
+        /// another program (e.g. CyberVault's TUI) capturing stdout.
+        #[arg(long)]
+        raw: bool,
     },
     /// Diceware-style word passphrase (EFF large wordlist, 7776 words).
     Passphrase {
@@ -71,6 +76,10 @@ enum Commands {
         /// this label.
         #[arg(long)]
         save: Option<String>,
+        /// Machine-readable output: just the secret(s), one per line, no
+        /// banner/entropy meter/color — implies --quiet.
+        #[arg(long)]
+        raw: bool,
     },
     /// Checksum text or a file across SHA-256/SHA-512/BLAKE3.
     Hash {
@@ -110,31 +119,38 @@ fn charset_from_flags(no_lower: bool, no_upper: bool, no_digits: bool, no_symbol
 /// Shared by `password`/`passphrase`: handles `--copy` and `--save` on
 /// the first generated secret, once generation is done. Neither flag
 /// touches generation itself, so this stays common rather than
-/// duplicated per command.
-fn handle_copy_and_save(first: Option<&str>, copy: bool, save: Option<&str>) {
+/// duplicated per command. In `--raw` mode these status lines go to
+/// stderr instead of stdout, so stdout stays exactly the secret(s) for
+/// whatever's capturing it.
+fn handle_copy_and_save(first: Option<&str>, copy: bool, save: Option<&str>, raw: bool) {
     let Some(secret) = first else { return };
+    let status = |msg: String| if raw { eprintln!("{msg}") } else { println!("{msg}") };
     if copy {
         match clipboard::copy(secret) {
-            Ok(()) => println!("(copied to clipboard)"),
+            Ok(()) => status("(copied to clipboard)".to_string()),
             Err(e) => eprintln!("keysmith: failed to copy to clipboard: {e}"),
         }
     }
     if let Some(label) = save {
         match vault_save::save(label, secret) {
-            Ok(true) => println!("(saved to CyberVault as \"{label}\")"),
+            Ok(true) => status(format!("(saved to CyberVault as \"{label}\")")),
             Ok(false) => eprintln!("keysmith: cybervault reported failure saving \"{label}\" (see its output above)"),
             Err(e) => eprintln!("keysmith: failed to run cybervault — is it installed? ({e})"),
         }
     }
 }
 
-fn run_password(length: usize, cs: &Charset, count: usize, copy: bool, save: Option<&str>, color_on: bool) -> ExitCode {
+fn run_password(length: usize, cs: &Charset, count: usize, copy: bool, save: Option<&str>, raw: bool, color_on: bool) -> ExitCode {
     let mut first: Option<String> = None;
     for _ in 0..count {
         match password::generate(length, cs) {
             Some(pw) => {
-                let bits = password::entropy_bits(length, cs);
-                println!("{}  {} {} bits ({})", pw, strength::meter(bits, 24, color_on), bits.round(), strength::label(bits));
+                if raw {
+                    println!("{pw}");
+                } else {
+                    let bits = password::entropy_bits(length, cs);
+                    println!("{}  {} {} bits ({})", pw, strength::meter(bits, 24, color_on), bits.round(), strength::label(bits));
+                }
                 if first.is_none() {
                     first = Some(pw);
                 }
@@ -145,18 +161,22 @@ fn run_password(length: usize, cs: &Charset, count: usize, copy: bool, save: Opt
             }
         }
     }
-    handle_copy_and_save(first.as_deref(), copy, save);
+    handle_copy_and_save(first.as_deref(), copy, save, raw);
     ExitCode::SUCCESS
 }
 
-fn run_passphrase(words: usize, separator: &str, capitalize: bool, count: usize, copy: bool, save: Option<&str>, color_on: bool) -> ExitCode {
+fn run_passphrase(words: usize, separator: &str, capitalize: bool, count: usize, copy: bool, save: Option<&str>, raw: bool, color_on: bool) -> ExitCode {
     let list = wordlist::words();
     let mut first: Option<String> = None;
     for _ in 0..count {
         match passphrase::generate(words, separator, capitalize, &list) {
             Some(p) => {
-                let bits = passphrase::entropy_bits(words, list.len());
-                println!("{}  {} {} bits ({})", p, strength::meter(bits, 24, color_on), bits.round(), strength::label(bits));
+                if raw {
+                    println!("{p}");
+                } else {
+                    let bits = passphrase::entropy_bits(words, list.len());
+                    println!("{}  {} {} bits ({})", p, strength::meter(bits, 24, color_on), bits.round(), strength::label(bits));
+                }
                 if first.is_none() {
                     first = Some(p);
                 }
@@ -167,7 +187,7 @@ fn run_passphrase(words: usize, separator: &str, capitalize: bool, count: usize,
             }
         }
     }
-    handle_copy_and_save(first.as_deref(), copy, save);
+    handle_copy_and_save(first.as_deref(), copy, save, raw);
     ExitCode::SUCCESS
 }
 
@@ -232,18 +252,19 @@ fn run_pwhash(verify: Option<String>) -> ExitCode {
 fn main() -> ExitCode {
     let args = Args::parse();
     let color_on = !args.no_color;
+    let raw = matches!(&args.command, Commands::Password { raw, .. } | Commands::Passphrase { raw, .. } if *raw);
 
-    if !args.quiet {
+    if !args.quiet && !raw {
         banner(color_on);
     }
 
     match args.command {
-        Commands::Password { length, no_lower, no_upper, no_digits, no_symbols, exclude_ambiguous, count, copy, save } => {
+        Commands::Password { length, no_lower, no_upper, no_digits, no_symbols, exclude_ambiguous, count, copy, save, raw } => {
             let cs = charset_from_flags(no_lower, no_upper, no_digits, no_symbols, exclude_ambiguous);
-            run_password(length, &cs, count, copy, save.as_deref(), color_on)
+            run_password(length, &cs, count, copy, save.as_deref(), raw, color_on)
         }
-        Commands::Passphrase { words, separator, capitalize, count, copy, save } => {
-            run_passphrase(words, &separator, capitalize, count, copy, save.as_deref(), color_on)
+        Commands::Passphrase { words, separator, capitalize, count, copy, save, raw } => {
+            run_passphrase(words, &separator, capitalize, count, copy, save.as_deref(), raw, color_on)
         }
         Commands::Hash { text, file } => run_hash(text, file),
         Commands::Pwhash { verify } => run_pwhash(verify),
