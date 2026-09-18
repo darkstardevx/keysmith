@@ -1,0 +1,359 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Keysmith — password, passphrase &amp; hash generator</title>
+<meta name="description" content="One who makes keys. Character-based passwords, real diceware passphrases, and checksums — Argon2id, BLAKE3, and the actual EFF wordlist.">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMjggMTI4Ij4KICAKICA8ZGVmcz48L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIyOCIgZmlsbD0iIzBhMDgwOCIvPgogIDxyZWN0IHg9Ii00LjIiIHk9IjQ4LjYiIHdpZHRoPSIxMy42IiBoZWlnaHQ9IjMxLjAiIHJ4PSIyLjUiIGZpbGw9IiNmNWVmZTgiLz48cmVjdCB4PSIxNi4zIiB5PSI2My40IiB3aWR0aD0iMTMuNiIgaGVpZ2h0PSIxNi4xIiByeD0iMi41IiBmaWxsPSIjZjVlZmU4Ii8+PHJlY3QgeD0iMzYuNyIgeT0iMzcuNCIgd2lkdGg9IjEzLjYiIGhlaWdodD0iNDIuMiIgcng9IjIuNSIgZmlsbD0iI2UwNjUzYSIvPjxyZWN0IHg9IjU3LjIiIHk9IjU0LjgiIHdpZHRoPSIxMy42IiBoZWlnaHQ9IjI0LjgiIHJ4PSIyLjUiIGZpbGw9IiNmNWVmZTgiLz48cmVjdCB4PSI3Ny42IiB5PSI0MS4xIiB3aWR0aD0iMTMuNiIgaGVpZ2h0PSIzOC40IiByeD0iMi41IiBmaWxsPSIjZjVlZmU4Ii8+PHJlY3QgeD0iOTguMSIgeT0iNjEuMCIgd2lkdGg9IjEzLjYiIGhlaWdodD0iMTguNiIgcng9IjIuNSIgZmlsbD0iI2UwNjUzYSIvPjxyZWN0IHg9IjExOC42IiB5PSI0NC44IiB3aWR0aD0iMTMuNiIgaGVpZ2h0PSIzNC43IiByeD0iMi41IiBmaWxsPSIjZjVlZmU4Ii8+Cjwvc3ZnPg==">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+  :root {
+    --void: #0a0808;
+    --panel: 24, 18, 17;
+    --line: #332521;
+    --line2: #241a17;
+    --ember: #e0653a;
+    --steel: #7a95a8;
+    --white: #f5efe8;
+    --muted: #9c8c81;
+    --dim: #4a3831;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  ::selection { background: rgba(224,101,58,.3); color: #fff; }
+
+  body {
+    margin: 0;
+    background:
+      radial-gradient(900px 500px at 90% -8%, rgba(224,101,58,.06), transparent 60%),
+      radial-gradient(700px 420px at 5% 100%, rgba(122,149,168,.07), transparent 60%),
+      var(--void);
+    background-attachment: fixed;
+    color: #d9cec6;
+    font-family: 'Space Grotesk', -apple-system, sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  img { max-width: 100%; }
+  a { color: inherit; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding-inline: 24px; }
+  h1, h2, h3 { font-family: 'Space Grotesk', sans-serif; color: var(--white); margin: 0; font-weight: 700; text-wrap: balance; }
+  p { margin: 0; }
+  code { font-family: 'IBM Plex Mono', monospace; background: rgba(255,255,255,.05); padding: 1px 5px; border-radius: 3px; font-size: .87em; }
+  .mono { font-family: 'IBM Plex Mono', monospace; }
+
+  /* ---------- companion banner ---------- */
+  .companion-banner {
+    background: linear-gradient(90deg, rgba(224,101,58,.1), rgba(122,149,168,.07));
+    border-bottom: 1px solid var(--line);
+    text-align: center;
+    padding: 9px 16px;
+    font-size: 13px;
+    color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .companion-banner a { color: var(--ember); text-decoration: none; font-weight: 600; }
+  .companion-banner a:hover { text-decoration: underline; }
+
+  /* ---------- nav ---------- */
+  nav {
+    position: sticky; top: 0; z-index: 40;
+    backdrop-filter: blur(12px);
+    background: rgba(10,8,8,.82);
+    border-bottom: 1px solid var(--line);
+  }
+  nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 60px; }
+  .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+  .brand img { width: 26px; height: 26px; }
+  .brand span { font-family: 'Space Grotesk', sans-serif; font-weight: 700; color: var(--white); font-size: 16px; letter-spacing: -.01em; }
+  .navlinks { display: flex; align-items: center; gap: 20px; }
+  .navlinks a.navlink { font-family: 'IBM Plex Mono', monospace; font-size: 12.5px; color: var(--muted); text-decoration: none; font-weight: 500; }
+  .navlinks a.navlink:hover { color: var(--white); }
+
+  /* ---------- buttons ---------- */
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 18px; border-radius: 6px;
+    font-family: 'IBM Plex Mono', monospace; font-weight: 600; font-size: 13.5px;
+    text-decoration: none; cursor: pointer; border: 1px solid transparent;
+  }
+  .btn-primary { background: rgba(224,101,58,.18); border-color: var(--ember); color: #fff; }
+  .btn-primary:hover { background: rgba(224,101,58,.3); }
+  .btn-ghost { background: rgba(255,255,255,.03); border-color: var(--line); color: #d9cec6; }
+  .btn-ghost:hover { border-color: #4a3831; background: rgba(255,255,255,.06); }
+
+  .pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 12px; border-radius: 999px;
+    font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: .04em;
+    background: rgba(255,255,255,.03); border: 1px solid var(--line); color: #b3a89c;
+  }
+  .pill.steel { border-color: rgba(122,149,168,.4); color: var(--steel); background: rgba(122,149,168,.06); }
+  .pill-row { display: flex; flex-wrap: wrap; gap: 8px; }
+
+  /* ---------- panel ---------- */
+  .panel {
+    position: relative; border-radius: 12px; border: 1px solid var(--line);
+    background: linear-gradient(160deg, rgba(24,18,17,.92), rgba(10,8,8,.95));
+    box-shadow: 0 26px 60px -34px rgba(0,0,0,.85);
+  }
+  .panel-bar { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; border-bottom: 1px solid var(--line2); }
+  .panel-id { display: flex; align-items: center; gap: 9px; }
+  .bar-dot { width: 8px; height: 8px; border-radius: 2px; background: var(--ember); box-shadow: 0 0 0 3px rgba(224,101,58,.18); }
+  .panel-label { font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: .05em; color: var(--muted); text-transform: uppercase; }
+  .panel-body { padding: 18px 20px; }
+  .panel-body pre { margin: 0; font-family: 'IBM Plex Mono', monospace; font-size: 12.6px; line-height: 1.8; color: #d9cec6; white-space: pre; overflow-x: auto; }
+  .panel .t-muted { color: var(--muted); }
+  .panel .t-ember { color: var(--ember); }
+  .panel .t-steel { color: var(--steel); }
+  .panel .t-white { color: var(--white); font-weight: 600; }
+  .panel .t-dim { color: var(--dim); }
+
+  /* ---------- hero ---------- */
+  .hero { padding: 56px 0 18px; }
+  .hero-grid { display: grid; grid-template-columns: 1.1fr .9fr; gap: 46px; align-items: center; }
+  .hero h1 { font-size: 44px; line-height: 1.1; margin-bottom: 16px; letter-spacing: -.005em; }
+  .hero-sub { font-size: 16.5px; color: var(--muted); max-width: 48ch; margin-bottom: 24px; line-height: 1.65; font-family: 'IBM Plex Mono', monospace; }
+  .hero-cta { display: flex; gap: 12px; margin-bottom: 6px; flex-wrap: wrap; }
+  .bars-visual { display: flex; justify-content: center; align-items: flex-end; gap: 9px; height: 200px; }
+  .bars-visual .bar { width: 22px; border-radius: 4px; background: var(--white); opacity: .88; }
+  .bars-visual .bar.ember { background: var(--ember); opacity: 1; }
+
+  /* ---------- sections ---------- */
+  section.feature { padding: 46px 0 6px; }
+  .f-kicker { font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--ember); margin-bottom: 10px; }
+  .f-grid { display: grid; grid-template-columns: .86fr 1.14fr; gap: 48px; align-items: center; }
+  .f-grid.rev { grid-template-columns: 1.14fr .86fr; }
+  .f-grid.rev .f-copy { order: 2; } .f-grid.rev .f-vis { order: 1; }
+  .f-copy h2 { font-size: 25px; margin-bottom: 12px; }
+  .f-copy p { color: var(--muted); font-size: 14.8px; margin-bottom: 10px; font-family: 'IBM Plex Mono', monospace; }
+  .f-copy p:last-child { margin-bottom: 0; }
+  .f-copy strong { color: var(--white); }
+
+  .seam { display: flex; align-items: center; gap: 8px; padding: 46px 0 0; }
+  .seam .line { flex: 1; height: 1px; background: repeating-linear-gradient(90deg, var(--line) 0 6px, transparent 6px 16px); }
+  .seam .dot { width: 4px; height: 4px; border-radius: 50%; background: var(--line); }
+
+  /* ---------- install ---------- */
+  .install { padding: 60px 0 54px; }
+  .install-head { text-align: center; max-width: 560px; margin: 0 auto 26px; }
+  .install-head h2 { font-size: 28px; margin-bottom: 10px; }
+  .install-head p { color: var(--muted); font-size: 14.5px; font-family: 'IBM Plex Mono', monospace; }
+  .install-card { max-width: 640px; margin: 0 auto; }
+  .os-tabs { display: flex; gap: 6px; padding: 12px 14px 0; }
+  .os-tab { padding: 7px 14px; border-radius: 7px; font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; color: var(--muted); background: transparent; border: 1px solid transparent; cursor: pointer; }
+  .os-tab.active { background: rgba(224,101,58,.14); border-color: var(--ember); color: #fff; }
+  .cmd-row { display: flex; align-items: center; gap: 10px; margin: 14px 16px 16px; padding: 12px 8px 12px 16px; background: rgba(0,0,0,.3); border: 1px solid var(--line2); border-radius: 8px; }
+  .cmd-row .prompt { color: var(--ember); font-family: 'IBM Plex Mono', monospace; font-size: 13px; flex-shrink: 0; }
+  .cmd-row code { flex: 1; font-size: 12.6px; background: none; padding: 0; overflow-x: auto; white-space: nowrap; }
+  .copy-btn { flex-shrink: 0; width: 32px; height: 32px; border-radius: 7px; border: 1px solid var(--line2); background: rgba(255,255,255,.03); color: var(--muted); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+  .copy-btn:hover { border-color: var(--line); color: #fff; }
+  .copy-btn.copied { color: var(--ember); border-color: var(--ember); }
+  .install-note { font-size: 11.5px; color: var(--dim); padding: 0 16px 14px; text-align: center; font-family: 'IBM Plex Mono', monospace; }
+  .dl-count { text-align: center; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--muted); margin-top: 14px; }
+  .install-more { text-align: center; margin-top: 14px; }
+  .install-more a { font-size: 12.5px; color: var(--muted); text-decoration: none; border-bottom: 1px dotted var(--line); font-family: 'IBM Plex Mono', monospace; }
+  .install-more a:hover { color: var(--ember); border-color: var(--ember); }
+  .install-companion { text-align: center; margin-top: 22px; padding-top: 20px; border-top: 1px dashed var(--line); }
+  .install-companion p { font-size: 13px; color: var(--muted); margin-bottom: 10px; font-family: 'IBM Plex Mono', monospace; }
+  .install-companion code { font-size: 12px; }
+
+  footer { border-top: 1px solid var(--line); padding: 28px 0 40px; margin-top: 20px; }
+  .foot-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+  .foot-brand { display: flex; align-items: center; gap: 9px; font-size: 12.5px; color: var(--muted); font-family: 'IBM Plex Mono', monospace; }
+  .foot-brand img { width: 18px; height: 18px; }
+  .foot-links { display: flex; gap: 16px; }
+  .foot-links a { font-size: 12px; color: var(--muted); text-decoration: none; font-weight: 500; font-family: 'IBM Plex Mono', monospace; }
+  .foot-links a:hover { color: #fff; }
+  .foot-family { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: .06em; color: #33261f; text-transform: uppercase; }
+
+  @media (max-width: 860px) {
+    .hero-grid, .f-grid, .f-grid.rev { grid-template-columns: 1fr; gap: 28px; }
+    .f-grid.rev .f-copy, .f-grid.rev .f-vis { order: initial; }
+    .hero h1 { font-size: 32px; }
+    .navlinks .navlink { display: none; }
+  }
+</style>
+
+<div class="companion-banner">
+  Pairs with <a href="https://github.com/darkstardevx/cybervault" target="_blank" rel="noopener">CyberVault</a> — <code>--save</code> pipes a generated secret straight into the vault.
+</div>
+
+<nav>
+  <div class="wrap">
+    <a class="brand" href="#">
+      <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMjggMTI4Ij4KICAKICA8ZGVmcz48L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIyOCIgZmlsbD0iIzBhMDgwOCIvPgogIDxyZWN0IHg9Ii00LjIiIHk9IjQ4LjYiIHdpZHRoPSIxMy42IiBoZWlnaHQ9IjMxLjAiIHJ4PSIyLjUiIGZpbGw9IiNmNWVmZTgiLz48cmVjdCB4PSIxNi4zIiB5PSI2My40IiB3aWR0aD0iMTMuNiIgaGVpZ2h0PSIxNi4xIiByeD0iMi41IiBmaWxsPSIjZjVlZmU4Ii8+PHJlY3QgeD0iMzYuNyIgeT0iMzcuNCIgd2lkdGg9IjEzLjYiIGhlaWdodD0iNDIuMiIgcng9IjIuNSIgZmlsbD0iI2UwNjUzYSIvPjxyZWN0IHg9IjU3LjIiIHk9IjU0LjgiIHdpZHRoPSIxMy42IiBoZWlnaHQ9IjI0LjgiIHJ4PSIyLjUiIGZpbGw9IiNmNWVmZTgiLz48cmVjdCB4PSI3Ny42IiB5PSI0MS4xIiB3aWR0aD0iMTMuNiIgaGVpZ2h0PSIzOC40IiByeD0iMi41IiBmaWxsPSIjZjVlZmU4Ii8+PHJlY3QgeD0iOTguMSIgeT0iNjEuMCIgd2lkdGg9IjEzLjYiIGhlaWdodD0iMTguNiIgcng9IjIuNSIgZmlsbD0iI2UwNjUzYSIvPjxyZWN0IHg9IjExOC42IiB5PSI0NC44IiB3aWR0aD0iMTMuNiIgaGVpZ2h0PSIzNC43IiByeD0iMi41IiBmaWxsPSIjZjVlZmU4Ii8+Cjwvc3ZnPg==" alt="">
+      <span>KEYSMITH</span>
+    </a>
+    <div class="navlinks">
+      <a class="navlink" href="#generate">Generate</a>
+      <a class="navlink" href="#hash">Hash</a>
+      <a class="navlink" href="#install">Install</a>
+      <a class="navlink btn btn-ghost" style="padding:7px 15px;font-size:12.5px;" href="https://github.com/darkstardevx/keysmith" target="_blank" rel="noopener">GitHub</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <div class="pill-row" style="margin-bottom:18px;">
+        <span class="pill">Rust</span>
+        <span class="pill steel">Argon2id</span>
+        <span class="pill steel">BLAKE3</span>
+        <span class="pill">MIT</span>
+      </div>
+      <h1>One who makes keys.</h1>
+      <p class="hero-sub">Character-based passwords, real diceware passphrases from the actual 7776-word EFF list, and checksums — with entropy in bits and a strength meter on everything it generates, not just "here's a string."</p>
+      <div class="hero-cta">
+        <a class="btn btn-primary" href="#install">Install Keysmith</a>
+        <a class="btn btn-ghost" href="#generate">See it generate →</a>
+      </div>
+    </div>
+    <div class="bars-visual">
+      <div class="bar" style="height:38%"></div>
+      <div class="bar" style="height:62%"></div>
+      <div class="bar" style="height:24%"></div>
+      <div class="bar ember" style="height:88%"></div>
+      <div class="bar" style="height:46%"></div>
+      <div class="bar" style="height:30%"></div>
+      <div class="bar ember" style="height:80%"></div>
+      <div class="bar" style="height:52%"></div>
+      <div class="bar" style="height:20%"></div>
+      <div class="bar ember" style="height:68%"></div>
+      <div class="bar" style="height:42%"></div>
+    </div>
+  </div>
+</header>
+
+<div class="wrap"><div class="seam"><span class="dot"></span><div class="line"></div><span class="dot"></span></div></div>
+
+<section class="feature" id="generate">
+  <div class="wrap f-grid">
+    <div class="f-copy">
+      <div class="f-kicker">Password &amp; passphrase</div>
+      <h2>Real words, real entropy —<br>not a hardcoded sample.</h2>
+      <p><code>password</code> is character-based with a configurable charset (<code>--exclude-ambiguous</code> drops <code>0O1lI|</code>). <code>passphrase</code> is diceware-style, drawn from the actual EFF large wordlist — 7776 words, embedded at compile time.</p>
+      <p>Both print <strong>entropy in bits</strong> and a colored strength meter alongside the result. <code>--save &lt;label&gt;</code> pipes it straight into CyberVault; <code>--raw</code> gives bare output for scripts.</p>
+    </div>
+    <div class="panel f-vis">
+      <div class="panel-bar"><div class="panel-id"><span class="bar-dot"></span><span class="panel-label">keysmith</span></div><span class="panel-label">generate</span></div>
+      <div class="panel-body">
+        <pre><span class="t-dim">$</span> <span class="t-white">keysmith passphrase --words 6 --save github</span>
+
+<span class="t-white">timber-holster-planet-ozone-velvet-cactus</span>
+<span class="t-steel">~101 bits (Very Strong)</span>
+<span class="t-ember">piped into cybervault add "github"</span>
+
+<span class="t-dim">$</span> <span class="t-white">keysmith password --length 24 --exclude-ambiguous --copy</span>
+<span class="t-white">kX8#mQ2vR&amp;pL9nW4tZ6cJ3h</span>
+<span class="t-steel">~140 bits (Very Strong)</span>
+<span class="t-dim">copied to clipboard</span></pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="wrap"><div class="seam"><span class="dot"></span><div class="line"></div><span class="dot"></span></div></div>
+
+<section class="feature" id="hash">
+  <div class="wrap f-grid rev">
+    <div class="f-copy">
+      <div class="f-kicker">Hash vs. pwhash — not the same thing</div>
+      <h2>Fast checksums and<br>slow password storage, kept apart.</h2>
+      <p><code>hash</code> is fast general-purpose checksumming (SHA-256/512, BLAKE3) — correct for verifying a file wasn't tampered with, <strong>wrong</strong> for storing a password, since fast hashes make offline brute-forcing cheap.</p>
+      <p><code>pwhash</code> is Argon2id specifically — deliberately slow, memory-hard, and salted. Password is a hidden terminal prompt that refuses piped input by design, never a CLI argument.</p>
+    </div>
+    <div class="panel f-vis">
+      <div class="panel-bar"><div class="panel-id"><span class="bar-dot"></span><span class="panel-label">keysmith hash / pwhash</span></div><span class="panel-label">checksum</span></div>
+      <div class="panel-body">
+        <pre><span class="t-dim">$</span> <span class="t-white">keysmith hash --file release.tar.gz</span>
+<span class="t-muted">sha256</span>  <span class="t-white">9f86d081884c7d659...</span>
+<span class="t-muted">blake3</span>  <span class="t-white">af1349b9f5f9a1a6a...</span>
+
+<span class="t-dim">$</span> <span class="t-white">keysmith pwhash</span>
+<span class="t-muted">Password:</span> <span class="t-white">************</span>
+<span class="t-ember">$argon2id$v=19$m=19456,t=2,p=1$...</span></pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="install" id="install">
+  <div class="wrap">
+    <div class="install-head">
+      <h2>Get Keysmith running</h2>
+      <p>One command — downloads, verifies the checksum, installs to <code>~/.local/bin</code>.</p>
+    </div>
+    <div class="panel install-card">
+      <div class="os-tabs" role="tablist">
+        <button class="os-tab active" data-os="linux" onclick="ksSetOs('linux')">Linux</button>
+        <button class="os-tab" data-os="macos" onclick="ksSetOs('macos')">macOS</button>
+      </div>
+      <div class="cmd-row">
+        <span class="prompt">&gt;_</span>
+        <code id="ks-cmd" class="mono">curl -fsSL https://raw.githubusercontent.com/darkstardevx/keysmith/main/install.sh | sh</code>
+        <button class="copy-btn" onclick="ksCopy(this)" aria-label="Copy command">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        </button>
+      </div>
+      <p class="install-note">Installs <code>keysmith</code>. Works standalone — CyberVault is only needed for <code>--save</code>.</p>
+      <div class="install-companion">
+        <p>Want to pipe generated secrets straight into a vault?</p>
+        <div class="cmd-row" style="margin:0;">
+          <span class="prompt">&gt;_</span>
+          <code class="mono">curl -fsSL https://raw.githubusercontent.com/darkstardevx/cybervault/main/install.sh | sh</code>
+        </div>
+      </div>
+    </div>
+    <p class="dl-count" id="dl-count">&hellip;</p>
+    <div class="install-more">
+      <a href="https://github.com/darkstardevx/keysmith#-what-it-does" target="_blank" rel="noopener">More install options &amp; manual builds →</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap foot-row">
+    <div class="foot-brand">
+      <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMjggMTI4Ij4KICAKICA8ZGVmcz48L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIyOCIgZmlsbD0iIzBhMDgwOCIvPgogIDxyZWN0IHg9Ii00LjIiIHk9IjQ4LjYiIHdpZHRoPSIxMy42IiBoZWlnaHQ9IjMxLjAiIHJ4PSIyLjUiIGZpbGw9IiNmNWVmZTgiLz48cmVjdCB4PSIxNi4zIiB5PSI2My40IiB3aWR0aD0iMTMuNiIgaGVpZ2h0PSIxNi4xIiByeD0iMi41IiBmaWxsPSIjZjVlZmU4Ii8+PHJlY3QgeD0iMzYuNyIgeT0iMzcuNCIgd2lkdGg9IjEzLjYiIGhlaWdodD0iNDIuMiIgcng9IjIuNSIgZmlsbD0iI2UwNjUzYSIvPjxyZWN0IHg9IjU3LjIiIHk9IjU0LjgiIHdpZHRoPSIxMy42IiBoZWlnaHQ9IjI0LjgiIHJ4PSIyLjUiIGZpbGw9IiNmNWVmZTgiLz48cmVjdCB4PSI3Ny42IiB5PSI0MS4xIiB3aWR0aD0iMTMuNiIgaGVpZ2h0PSIzOC40IiByeD0iMi41IiBmaWxsPSIjZjVlZmU4Ii8+PHJlY3QgeD0iOTguMSIgeT0iNjEuMCIgd2lkdGg9IjEzLjYiIGhlaWdodD0iMTguNiIgcng9IjIuNSIgZmlsbD0iI2UwNjUzYSIvPjxyZWN0IHg9IjExOC42IiB5PSI0NC44IiB3aWR0aD0iMTMuNiIgaGVpZ2h0PSIzNC43IiByeD0iMi41IiBmaWxsPSIjZjVlZmU4Ii8+Cjwvc3ZnPg==" alt="">
+      <span>Keysmith &middot; MIT licensed &middot; pairs with CyberVault</span>
+    </div>
+    <div class="foot-links">
+      <a href="https://github.com/darkstardevx/keysmith" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://github.com/darkstardevx/cybervault" target="_blank" rel="noopener">CyberVault</a>
+      <a href="#install">Install</a>
+    </div>
+    <div class="foot-family">Cybercore family</div>
+  </div>
+</footer>
+
+<script>
+  const CMDS = {
+    linux: 'curl -fsSL https://raw.githubusercontent.com/darkstardevx/keysmith/main/install.sh | sh',
+    macos: 'curl -fsSL https://raw.githubusercontent.com/darkstardevx/keysmith/main/install.sh | sh'
+  };
+  function ksSetOs(os) {
+    document.querySelectorAll('.os-tab').forEach(t => t.classList.toggle('active', t.dataset.os === os));
+    document.getElementById('ks-cmd').textContent = CMDS[os];
+  }
+  function ksCopy(btn) {
+    const text = document.getElementById('ks-cmd').textContent;
+    navigator.clipboard?.writeText(text).then(() => {
+      btn.classList.add('copied');
+      setTimeout(() => btn.classList.remove('copied'), 1400);
+    }).catch(() => {});
+  }
+  try { if (/Mac OS X|Macintosh/.test(navigator.userAgent)) ksSetOs('macos'); } catch (e) {}
+
+  fetch('https://api.github.com/repos/darkstardevx/keysmith/releases/latest', { headers: { Accept: 'application/vnd.github+json' } })
+    .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then(rel => {
+      const dl = (rel.assets || [])
+        .filter(a => !a.name.endsWith('.sha256'))
+        .reduce((sum, a) => sum + (a.download_count || 0), 0);
+      document.getElementById('dl-count').textContent = dl.toLocaleString() + ' downloads (' + rel.tag_name + ')';
+    })
+    .catch(() => { document.getElementById('dl-count').textContent = ''; });
+</script>
