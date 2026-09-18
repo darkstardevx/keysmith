@@ -22,7 +22,13 @@ pub struct Charset {
 
 impl Default for Charset {
     fn default() -> Self {
-        Self { lower: true, upper: true, digits: true, symbols: true, exclude_ambiguous: false }
+        Self {
+            lower: true,
+            upper: true,
+            digits: true,
+            symbols: true,
+            exclude_ambiguous: false,
+        }
     }
 }
 
@@ -57,7 +63,11 @@ pub fn generate(length: usize, charset: &Charset) -> Option<String> {
         return None;
     }
     let mut rng = rand::thread_rng();
-    Some((0..length).map(|_| pool[rng.gen_range(0..pool.len())]).collect())
+    Some(
+        (0..length)
+            .map(|_| pool[rng.gen_range(0..pool.len())])
+            .collect(),
+    )
 }
 
 /// Bits of entropy for a password drawn uniformly from a pool of this
@@ -82,7 +92,13 @@ mod tests {
 
     #[test]
     fn empty_charset_returns_none() {
-        let cs = Charset { lower: false, upper: false, digits: false, symbols: false, exclude_ambiguous: false };
+        let cs = Charset {
+            lower: false,
+            upper: false,
+            digits: false,
+            symbols: false,
+            exclude_ambiguous: false,
+        };
         assert!(generate(16, &cs).is_none());
     }
 
@@ -93,14 +109,26 @@ mod tests {
 
     #[test]
     fn respects_restricted_charset() {
-        let cs = Charset { lower: true, upper: false, digits: false, symbols: false, exclude_ambiguous: false };
+        let cs = Charset {
+            lower: true,
+            upper: false,
+            digits: false,
+            symbols: false,
+            exclude_ambiguous: false,
+        };
         let pw = generate(50, &cs).unwrap();
         assert!(pw.chars().all(|c| c.is_ascii_lowercase()));
     }
 
     #[test]
     fn exclude_ambiguous_removes_flagged_chars() {
-        let cs = Charset { lower: false, upper: false, digits: true, symbols: false, exclude_ambiguous: true };
+        let cs = Charset {
+            lower: false,
+            upper: false,
+            digits: true,
+            symbols: false,
+            exclude_ambiguous: true,
+        };
         // digits pool minus ambiguous "0" and "1" leaves 8 chars — generate
         // a long password and confirm none of the excluded chars appear.
         let pw = generate(200, &cs).unwrap();
@@ -111,7 +139,13 @@ mod tests {
     #[test]
     fn entropy_matches_hand_calculation() {
         // lowercase-only, 26 chars, length 10: 10 * log2(26)
-        let cs = Charset { lower: true, upper: false, digits: false, symbols: false, exclude_ambiguous: false };
+        let cs = Charset {
+            lower: true,
+            upper: false,
+            digits: false,
+            symbols: false,
+            exclude_ambiguous: false,
+        };
         let bits = entropy_bits(10, &cs);
         let expected = 10.0 * (26f64).log2();
         assert!((bits - expected).abs() < 0.001);

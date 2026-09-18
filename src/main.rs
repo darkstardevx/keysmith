@@ -13,7 +13,11 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 #[derive(Parser, Debug)]
-#[command(name = "keysmith", version = "0.1.0", about = "Password, passphrase, and hash generator")]
+#[command(
+    name = "keysmith",
+    version = "0.1.0",
+    about = "Password, passphrase, and hash generator"
+)]
 struct Args {
     #[command(subcommand)]
     command: Commands,
@@ -46,7 +50,7 @@ enum Commands {
         exclude_ambiguous: bool,
         #[arg(short, long, default_value_t = 1)]
         count: usize,
-        /// Copy the (first) generated password to the clipboard via wl-copy.
+        /// Copy the (first) generated password to the clipboard (wl-copy on Linux, pbcopy on macOS).
         #[arg(long)]
         copy: bool,
         /// Save the (first) generated password into CyberVault under this
@@ -99,7 +103,11 @@ enum Commands {
 }
 
 fn banner(color_on: bool) {
-    let (c, r) = if color_on { (cybercore::palette::purple(), cybercore::palette::RESET) } else { (String::new(), "") };
+    let (c, r) = if color_on {
+        (cybercore::palette::purple(), cybercore::palette::RESET)
+    } else {
+        (String::new(), "")
+    };
     println!(
         "{c}
   _  __             _           _ _   _
@@ -112,8 +120,20 @@ fn banner(color_on: bool) {
     println!("  » Password, passphrase & hash generator\n");
 }
 
-fn charset_from_flags(no_lower: bool, no_upper: bool, no_digits: bool, no_symbols: bool, exclude_ambiguous: bool) -> Charset {
-    Charset { lower: !no_lower, upper: !no_upper, digits: !no_digits, symbols: !no_symbols, exclude_ambiguous }
+fn charset_from_flags(
+    no_lower: bool,
+    no_upper: bool,
+    no_digits: bool,
+    no_symbols: bool,
+    exclude_ambiguous: bool,
+) -> Charset {
+    Charset {
+        lower: !no_lower,
+        upper: !no_upper,
+        digits: !no_digits,
+        symbols: !no_symbols,
+        exclude_ambiguous,
+    }
 }
 
 /// Shared by `password`/`passphrase`: handles `--copy` and `--save` on
@@ -124,7 +144,13 @@ fn charset_from_flags(no_lower: bool, no_upper: bool, no_digits: bool, no_symbol
 /// whatever's capturing it.
 fn handle_copy_and_save(first: Option<&str>, copy: bool, save: Option<&str>, raw: bool) {
     let Some(secret) = first else { return };
-    let status = |msg: String| if raw { eprintln!("{msg}") } else { println!("{msg}") };
+    let status = |msg: String| {
+        if raw {
+            eprintln!("{msg}")
+        } else {
+            println!("{msg}")
+        }
+    };
     if copy {
         match clipboard::copy(secret) {
             Ok(()) => status("(copied to clipboard)".to_string()),
@@ -134,13 +160,23 @@ fn handle_copy_and_save(first: Option<&str>, copy: bool, save: Option<&str>, raw
     if let Some(label) = save {
         match vault_save::save(label, secret) {
             Ok(true) => status(format!("(saved to CyberVault as \"{label}\")")),
-            Ok(false) => eprintln!("keysmith: cybervault reported failure saving \"{label}\" (see its output above)"),
+            Ok(false) => eprintln!(
+                "keysmith: cybervault reported failure saving \"{label}\" (see its output above)"
+            ),
             Err(e) => eprintln!("keysmith: failed to run cybervault — is it installed? ({e})"),
         }
     }
 }
 
-fn run_password(length: usize, cs: &Charset, count: usize, copy: bool, save: Option<&str>, raw: bool, color_on: bool) -> ExitCode {
+fn run_password(
+    length: usize,
+    cs: &Charset,
+    count: usize,
+    copy: bool,
+    save: Option<&str>,
+    raw: bool,
+    color_on: bool,
+) -> ExitCode {
     let mut first: Option<String> = None;
     for _ in 0..count {
         match password::generate(length, cs) {
@@ -149,7 +185,13 @@ fn run_password(length: usize, cs: &Charset, count: usize, copy: bool, save: Opt
                     println!("{pw}");
                 } else {
                     let bits = password::entropy_bits(length, cs);
-                    println!("{}  {} {} bits ({})", pw, strength::meter(bits, 24, color_on), bits.round(), strength::label(bits));
+                    println!(
+                        "{}  {} {} bits ({})",
+                        pw,
+                        strength::meter(bits, 24, color_on),
+                        bits.round(),
+                        strength::label(bits)
+                    );
                 }
                 if first.is_none() {
                     first = Some(pw);
@@ -165,7 +207,20 @@ fn run_password(length: usize, cs: &Charset, count: usize, copy: bool, save: Opt
     ExitCode::SUCCESS
 }
 
-fn run_passphrase(words: usize, separator: &str, capitalize: bool, count: usize, copy: bool, save: Option<&str>, raw: bool, color_on: bool) -> ExitCode {
+// Each parameter is a distinct clap-parsed CLI flag, same shape as
+// run_password's 7 -- a struct wrapper would just move the same fields
+// one level down for a thin dispatch function with a single call site.
+#[allow(clippy::too_many_arguments)]
+fn run_passphrase(
+    words: usize,
+    separator: &str,
+    capitalize: bool,
+    count: usize,
+    copy: bool,
+    save: Option<&str>,
+    raw: bool,
+    color_on: bool,
+) -> ExitCode {
     let list = wordlist::words();
     let mut first: Option<String> = None;
     for _ in 0..count {
@@ -175,7 +230,13 @@ fn run_passphrase(words: usize, separator: &str, capitalize: bool, count: usize,
                     println!("{p}");
                 } else {
                     let bits = passphrase::entropy_bits(words, list.len());
-                    println!("{}  {} {} bits ({})", p, strength::meter(bits, 24, color_on), bits.round(), strength::label(bits));
+                    println!(
+                        "{}  {} {} bits ({})",
+                        p,
+                        strength::meter(bits, 24, color_on),
+                        bits.round(),
+                        strength::label(bits)
+                    );
                 }
                 if first.is_none() {
                     first = Some(p);
@@ -259,13 +320,40 @@ fn main() -> ExitCode {
     }
 
     match args.command {
-        Commands::Password { length, no_lower, no_upper, no_digits, no_symbols, exclude_ambiguous, count, copy, save, raw } => {
-            let cs = charset_from_flags(no_lower, no_upper, no_digits, no_symbols, exclude_ambiguous);
+        Commands::Password {
+            length,
+            no_lower,
+            no_upper,
+            no_digits,
+            no_symbols,
+            exclude_ambiguous,
+            count,
+            copy,
+            save,
+            raw,
+        } => {
+            let cs =
+                charset_from_flags(no_lower, no_upper, no_digits, no_symbols, exclude_ambiguous);
             run_password(length, &cs, count, copy, save.as_deref(), raw, color_on)
         }
-        Commands::Passphrase { words, separator, capitalize, count, copy, save, raw } => {
-            run_passphrase(words, &separator, capitalize, count, copy, save.as_deref(), raw, color_on)
-        }
+        Commands::Passphrase {
+            words,
+            separator,
+            capitalize,
+            count,
+            copy,
+            save,
+            raw,
+        } => run_passphrase(
+            words,
+            &separator,
+            capitalize,
+            count,
+            copy,
+            save.as_deref(),
+            raw,
+            color_on,
+        ),
         Commands::Hash { text, file } => run_hash(text, file),
         Commands::Pwhash { verify } => run_pwhash(verify),
     }

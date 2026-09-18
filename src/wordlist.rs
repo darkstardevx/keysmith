@@ -15,7 +15,11 @@ mod tests {
 
     #[test]
     fn has_the_full_diceware_word_count() {
-        assert_eq!(words().len(), 7776, "EFF large wordlist should be exactly 6^5 words");
+        assert_eq!(
+            words().len(),
+            7776,
+            "EFF large wordlist should be exactly 6^5 words"
+        );
     }
 
     #[test]
@@ -32,6 +36,8 @@ mod tests {
         // by this exact assertion failing against the real embedded data
         // rather than a synthetic guess at the format, so the fix is to
         // allow hyphens, not to assume the fetched list was corrupted.
-        assert!(words().iter().all(|w| w.chars().all(|c| c.is_ascii_lowercase() || c == '-')));
+        assert!(words()
+            .iter()
+            .all(|w| w.chars().all(|c| c.is_ascii_lowercase() || c == '-')));
     }
 }

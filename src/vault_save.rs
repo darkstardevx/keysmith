@@ -11,7 +11,14 @@ use std::io::Write;
 use std::process::{Command, Stdio};
 
 pub fn save(label: &str, secret: &str) -> std::io::Result<bool> {
-    let mut child = Command::new("cybervault").args(["add", label]).stdin(Stdio::piped()).spawn()?;
-    child.stdin.take().expect("stdin was piped").write_all(secret.as_bytes())?;
+    let mut child = Command::new("cybervault")
+        .args(["add", label])
+        .stdin(Stdio::piped())
+        .spawn()?;
+    child
+        .stdin
+        .take()
+        .expect("stdin was piped")
+        .write_all(secret.as_bytes())?;
     Ok(child.wait()?.success())
 }

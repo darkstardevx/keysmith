@@ -11,12 +11,18 @@ use argon2::Argon2;
 
 pub fn hash_password(password: &str) -> Result<String, String> {
     let salt = SaltString::generate(&mut OsRng);
-    Argon2::default().hash_password(password.as_bytes(), &salt).map(|h| h.to_string()).map_err(|e| e.to_string())
+    Argon2::default()
+        .hash_password(password.as_bytes(), &salt)
+        .map(|h| h.to_string())
+        .map_err(|e| e.to_string())
 }
 
 pub fn verify_password(password: &str, phc_hash: &str) -> Result<bool, String> {
-    let parsed = PasswordHash::new(phc_hash).map_err(|e| format!("not a valid PHC hash string: {e}"))?;
-    Ok(Argon2::default().verify_password(password.as_bytes(), &parsed).is_ok())
+    let parsed =
+        PasswordHash::new(phc_hash).map_err(|e| format!("not a valid PHC hash string: {e}"))?;
+    Ok(Argon2::default()
+        .verify_password(password.as_bytes(), &parsed)
+        .is_ok())
 }
 
 #[cfg(test)]

@@ -12,4 +12,4 @@ blake3 = "1"
 argon2 = "0.5"
 password-hash = { version = "0.5", features = ["rand_core"] }
 rpassword = "7"
-cybercore = { path = "/home/raven/.sysops/cybercore" }
+cybercore = "0.4"

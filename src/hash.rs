@@ -34,7 +34,10 @@ mod tests {
     fn known_sha256_vector() {
         // sha256("abc") — a standard published test vector.
         let result = hash_bytes(b"abc");
-        assert_eq!(result.sha256, "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
+        assert_eq!(
+            result.sha256,
+            "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        );
     }
 
     #[test]
@@ -45,7 +48,11 @@ mod tests {
         // the expected literal one character short (a dropped trailing
         // "f") and was comparing against a value that was *never* right,
         // rather than actually confirming the implementation.
-        assert_eq!(result.sha512.len(), 128, "SHA-512 hex output should be exactly 128 chars (64 bytes)");
+        assert_eq!(
+            result.sha512.len(),
+            128,
+            "SHA-512 hex output should be exactly 128 chars (64 bytes)"
+        );
         assert_eq!(
             result.sha512,
             "ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f"

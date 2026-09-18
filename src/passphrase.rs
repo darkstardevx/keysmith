@@ -5,7 +5,12 @@
 
 use rand::Rng;
 
-pub fn generate(word_count: usize, separator: &str, capitalize: bool, wordlist: &[&str]) -> Option<String> {
+pub fn generate(
+    word_count: usize,
+    separator: &str,
+    capitalize: bool,
+    wordlist: &[&str],
+) -> Option<String> {
     if word_count == 0 || wordlist.is_empty() {
         return None;
     }

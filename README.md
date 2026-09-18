@@ -1,8 +1,27 @@
 # 🔑 Keysmith
 
+[![CI](https://github.com/darkstardevx/keysmith/actions/workflows/ci.yml/badge.svg)](https://github.com/darkstardevx/keysmith/actions/workflows/ci.yml)
+[![Release](https://github.com/darkstardevx/keysmith/actions/workflows/release.yml/badge.svg)](https://github.com/darkstardevx/keysmith/actions/workflows/release.yml)
+
 `Rust` · `Argon2id` · `BLAKE3`
 
 **Password, passphrase, and hash generator.** One who makes keys.
+
+## 📦 Install
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/darkstardevx/keysmith/main/install.sh | sh
+```
+
+Downloads the latest release for your platform (Linux or macOS, x86_64
+or aarch64), verifies its SHA-256 checksum, and installs `keysmith`
+to `~/.local/bin`. Or build from source with `cargo build --release`.
+
+Install [CyberVault](https://github.com/darkstardevx/cybervault) too if
+you want `--save <label>` (piping a generated secret straight into it)
+or CyberVault's own TUI calling back into Keysmith to generate on the
+spot (Ctrl+G/Ctrl+P) — each shells out to the other's binary on `PATH`,
+neither depends on the other at compile time.
 
 ## 🚀 What it does
 
@@ -83,7 +102,7 @@ src/vault_save.rs  pipes a generated secret into `cybervault add`
 
 ## 🗺 Known limitations
 
-- Clipboard support is Wayland-only (`wl-copy`) — this box's desktop, not built to be portable
+- Clipboard support: `wl-copy` on Linux (Wayland only — no X11 fallback), `pbcopy` on macOS
 - `hash --file` reads the whole file into memory rather than streaming — fine for normal files, not ideal for something huge
 
 ## 📄 License
